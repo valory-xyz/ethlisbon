@@ -38,18 +38,18 @@ clean-test:
 
 .PHONY: lint
 lint:
-	black collectooor/skills collectooor/contracts
-	isort collectooor/skills collectooor/contracts
-	flake8 collectooor/skills collectooor/contracts
-	darglint collectooor/skills collectooor/contracts
+	black packages/collectooor/contracts/artblocks packages/collectooor/skills/monitor
+	isort packages/collectooor
+	flake8 packages/collectooor
+	darglint packages/collectooor
 
 .PHONY: pylint
 pylint:
-	pylint -j4 collectooor/skills collectooor/contracts
+	pylint -j4 packages/collectooor
 
 .PHONY: static
 static:
-	mypy collectooor/skills collectooor/contracts --disallow-untyped-defs
+	mypy packages/collectooor --disallow-untyped-defs
 
 v := $(shell pip -V | grep virtualenvs)
 
@@ -73,7 +73,9 @@ new_env: clean
 .PHONY: new_agent
 new_agent:
 	rm -rf collectooor
+	aea fingerprint by-path packages/collectooor/skills/monitor
+	aea fingerprint by-path packages/collectooor/contracts/artblocks
 	aea fetch --local collectooor/collectooor
 	cp config/ethereum_private_key.txt collectooor/ethereum_private_key.txt
 	cd collectooor; aea add-key ethereum
-
+	cd collectooor; aea config set vendor.fetchai.connections.ledger.config.ledger_apis.ethereum.address https://eth-ropsten.gateway.pokt.network/v1/lb/6173ebc0e190010034959f9a

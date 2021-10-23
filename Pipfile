@@ -43,6 +43,7 @@ types-protobuf = "*"
 types-requests = "*"
 vulture = "==2.3"
 aiohttp = "<3.8,>=3.7.4"
+certifi = "2021.10.8"
 
 [requires]
 python_version = "3.8"

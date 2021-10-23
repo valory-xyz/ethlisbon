@@ -7,7 +7,8 @@ license: Apache-2.0
 aea_version: '>=1.0.0, <2.0.0'
 fingerprint:
   __init__.py: QmYGUBJKouqca4JAyxX8R9STbHxqMq9Y2iTiL3LxjUKgyZ
-  behaviours.py: QmYLrANcuqvAi6Z8wNeF7VBy1Q5PWxAqj6cpnZjpjr7g7U
+  behaviours.py: QmS3K4ktLHGXd6cNiHU1BE3uMoc3zWk32KdVcxPvnPTQxA
+  dialogues.py: QmRHPT8fxLFjejfDB98GepjJe8is2g4kYGchJm66iY9v57
   handlers.py: QmY2zr3vuz6YajVtotfyherF2W6Ak6kdDe8dBUbtKDGX2x
   models.py: QmTme7yEW2SZmnKEsTgq9DVCJasNGFFfhAyRcQdAC64YV3
 fingerprint_ignore_patterns: []
@@ -33,8 +34,20 @@ handlers:
     args: {}
     class_name: SigningHandler
 models:
+  contract_api_dialogues:
+    args: {}
+    class_name: ContractApiDialogues
+  http_dialogues:
+    args: {}
+    class_name: HttpDialogues
+  ledger_api_dialogues:
+    args: {}
+    class_name: LedgerApiDialogues
   requests:
     args: {}
     class_name: Requests
+  signing_dialogues:
+    args: {}
+    class_name: SigningDialogues
 dependencies: {}
 is_abstract: false
