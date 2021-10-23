@@ -2,27 +2,33 @@ agent_name: collectooor
 author: collectooor
 version: 0.1.0
 license: Apache-2.0
-description: ''
+description: An agent that continously watches [ArtBlocks](artblocks.io) for new drops
+  and participates in the auction to mint new NFTs.
 aea_version: '>=1.1.0, <2.0.0'
 fingerprint: {}
 fingerprint_ignore_patterns: []
-connections: []
+connections:
+- fetchai/http_client:0.22.0
+- fetchai/ledger:0.18.0
 contracts: []
 protocols:
+- fetchai/contract_api:1.0.0
 - fetchai/default:1.0.0
+- fetchai/http:1.0.0
+- fetchai/ledger_api:1.0.0
 - fetchai/signing:1.0.0
 - fetchai/state_update:1.0.0
-skills: []
-default_ledger: fetchai
+skills:
+- collectooor/monitor:0.1.0
+default_ledger: ethereum
 required_ledgers:
-- fetchai
+- ethereum
 default_routing: {}
 connection_private_key_paths: {}
-private_key_paths:
-  ethereum: ethereum_private_key.txt
+private_key_paths: {}
 logging_config:
   disable_existing_loggers: false
   version: 1
 dependencies:
-  aea-ledger-fetchai: {}
+  aea-ledger-ethereum: {}
 default_connection: null

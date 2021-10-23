@@ -1,1 +1,0 @@
-"""Contracts of the collectooor."""

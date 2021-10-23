@@ -41,7 +41,6 @@ lint:
 	black collectooor/skills collectooor/contracts
 	isort collectooor/skills collectooor/contracts
 	flake8 collectooor/skills collectooor/contracts
-	vulture collectooor/skills collectooor/contracts
 	darglint collectooor/skills collectooor/contracts
 
 .PHONY: pylint
@@ -70,3 +69,11 @@ new_env: clean
 	else\
 		echo "In a virtual environment! Exit first: 'exit'.";\
 	fi
+
+.PHONY: new_agent
+new_agent:
+	rm -rf collectooor
+	aea fetch --local collectooor/collectooor
+	cp config/ethereum_private_key.txt collectooor/ethereum_private_key.txt
+	cd collectooor; aea add-key ethereum
+

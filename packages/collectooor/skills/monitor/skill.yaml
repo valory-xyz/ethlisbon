@@ -1,0 +1,40 @@
+name: monitor
+author: collectooor
+version: 0.1.0
+type: skill
+description: The monitoring skill watches the ArtBlocks contract for relevant events.
+license: Apache-2.0
+aea_version: '>=1.0.0, <2.0.0'
+fingerprint:
+  __init__.py: QmYGUBJKouqca4JAyxX8R9STbHxqMq9Y2iTiL3LxjUKgyZ
+  behaviours.py: QmYLrANcuqvAi6Z8wNeF7VBy1Q5PWxAqj6cpnZjpjr7g7U
+  handlers.py: QmY2zr3vuz6YajVtotfyherF2W6Ak6kdDe8dBUbtKDGX2x
+  models.py: QmTme7yEW2SZmnKEsTgq9DVCJasNGFFfhAyRcQdAC64YV3
+fingerprint_ignore_patterns: []
+connections: []
+contracts: []
+protocols: []
+skills: []
+behaviours:
+  monitoring:
+    args: {}
+    class_name: Monitoring
+handlers:
+  contract_api:
+    args: {}
+    class_name: ContractApiHandler
+  http:
+    args: {}
+    class_name: HttpHandler
+  ledger_api:
+    args: {}
+    class_name: LedgerApiHandler
+  signing:
+    args: {}
+    class_name: SigningHandler
+models:
+  requests:
+    args: {}
+    class_name: Requests
+dependencies: {}
+is_abstract: false

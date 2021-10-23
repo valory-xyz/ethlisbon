@@ -2,7 +2,7 @@
 
 An agent that continously watches [ArtBlocks](artblocks.io) for new drops and participates in the auction to mint new NFTs.
 
-## During development:
+## Setup:
 
 - For Python development of the AEA collectooor run
 
@@ -11,3 +11,9 @@ An agent that continously watches [ArtBlocks](artblocks.io) for new drops and pa
 - Then 
 
       pipenv shell
+
+- To run the agent:
+
+      make new_agent
+      cd collectooor
+      aea run
