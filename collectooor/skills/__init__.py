@@ -1,0 +1,1 @@
+"""Skills of the collectooor."""

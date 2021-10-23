@@ -38,19 +38,19 @@ clean-test:
 
 .PHONY: lint
 lint:
-	black collectooor
-	isort collectooor
-	flake8 collectooor
-	vulture collectooor
-	darglint collectooor
+	black collectooor/skills collectooor/contracts
+	isort collectooor/skills collectooor/contracts
+	flake8 collectooor/skills collectooor/contracts
+	vulture collectooor/skills collectooor/contracts
+	darglint collectooor/skills collectooor/contracts
 
 .PHONY: pylint
 pylint:
-	pylint -j4 collectooor
+	pylint -j4 collectooor/skills collectooor/contracts
 
 .PHONY: static
 static:
-	mypy collectooor --disallow-untyped-defs
+	mypy collectooor/skills collectooor/contracts --disallow-untyped-defs
 
 v := $(shell pip -V | grep virtualenvs)
 
