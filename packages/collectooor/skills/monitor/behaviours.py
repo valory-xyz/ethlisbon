@@ -26,6 +26,9 @@ from aea.protocols.dialogue.base import Dialogue
 from aea.skills.base import Behaviour
 
 from packages.collectooor.contracts.artblocks.contract import ArtBlocksContract
+from packages.collectooor.contracts.artblocks_periphery.contract import (
+    ArtBlocksPeripheryContract,
+)
 from packages.collectooor.skills.monitor.dialogues import (
     ContractApiDialogue,
     ContractApiDialogues,
@@ -40,6 +43,7 @@ from packages.fetchai.connections.ledger.base import CONNECTION_ID as LEDGER_API
 from packages.fetchai.protocols.contract_api import ContractApiMessage
 from packages.fetchai.protocols.http import HttpMessage
 from packages.fetchai.protocols.signing.custom_types import Terms
+from packages.valory.contracts.gnosis_safe.contract import GnosisSafeContract
 
 
 class Monitoring(Behaviour):
@@ -49,30 +53,48 @@ class Monitoring(Behaviour):
         """Init the monitoring behaviour."""
         super().__init__(*args, **kwargs)
         self.active_project: Optional[int] = None
+        self.project_details: Optional[dict] = None
         self.is_request_in_flight = False
         self.artblocks_contract = "0x1cd623a86751d4c4f20c96000fec763941f098a2"
+        self.safe_contract = "0x2cab92c1e9d2a701ca0411b0ff35a0907ca31f7f"
+        self.data: Optional[bytes] = None
 
     def setup(self) -> None:
         """Implement the setup."""
 
     def act(self) -> None:
         """Implement the act."""
-        if self.active_project is None:
-            self.find_active_project()
+        if self.active_project is None and not self.is_request_in_flight:
+            self.send_contract_api_request(
+                request_callback=self.handle_active_project_id,
+                performative=ContractApiMessage.Performative.GET_STATE,  # type: ignore
+                contract_address=self.artblocks_contract,
+                contract_id=str(ArtBlocksContract.contract_id),
+                contract_callable="get_active_project",
+            )
+        if self.active_project is not None and self.data is None:
+            value = 1
+            self.send_contract_api_request(
+                request_callback=self.handle_active_project_id,
+                performative=ContractApiMessage.Performative.GET_STATE,  # type: ignore
+                contract_address=self.artblocks_contract,
+                contract_id=str(ArtBlocksPeripheryContract.contract_id),
+                contract_callable="purchase_data",
+                to_address=self.context.agent_address,
+                value=value,
+            )
+            # self.send_contract_api_request(
+            #     performative=ContractApiMessage.Performative.GET_RAW_TRANSACTION,  # type: ignore
+            #     contract_address=self.safe_contract,
+            #     contract_id=str(GnosisSafeContract.contract_id),
+            #     contract_callable="get_raw_safe_transaction_hash",
+            #     to_address=self.artblocks_contract,
+            #     value=value,
+            #     data=data,
+            # )
 
     def teardown(self) -> None:
         """Implement the task teardown."""
-
-    def find_active_project(self) -> None:
-        """Find the active artblock project with the highest project id."""
-        if not self.is_request_in_flight:
-            self.send_contract_api_request(
-                request_callback=self.handle_active_project_id,
-                performative=ContractApiMessage.Performative.GET_RAW_TRANSACTION,  # type: ignore
-                contract_address=self.artblocks_contract,
-                contract_id=str(ArtBlocksContract.contract_id),
-                contract_callable="active_project_id",
-            )
 
     def send_contract_api_request(  # pylint: disable=too-many-arguments
         self,
@@ -123,9 +145,14 @@ class Monitoring(Behaviour):
 
     def handle_active_project_id(self, message: ContractApiMessage) -> None:
         """Callback handler for the active project id request."""
+        self.is_request_in_flight = False
         if not message.performative == ContractApiMessage.Performative.STATE:
             raise ValueError("wrong performative")
-        self.active_project = cast(int, message.state.body["project_id"])
+        project_id = cast(Optional[int], message.state.body["project_id"])
+        self.active_project = project_id
+        if project_id is not None:
+            self.project_details = message.state.body
+            self.context.logger.info(f"found project: {self.project_details}")
 
     @classmethod
     def _get_request_nonce_from_dialogue(cls, dialogue: Dialogue) -> str:
