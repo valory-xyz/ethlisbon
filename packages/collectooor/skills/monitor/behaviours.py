@@ -19,6 +19,7 @@
 
 """This package contains a scaffold of a behaviour."""
 
+import binascii
 import json
 from typing import Any, Callable, Dict, Optional, Tuple, cast
 
@@ -34,6 +35,10 @@ from packages.collectooor.skills.monitor.dialogues import (
     ContractApiDialogues,
     HttpDialogue,
     HttpDialogues,
+    LedgerApiDialogue,
+    LedgerApiDialogues,
+    SigningDialogue,
+    SigningDialogues,
 )
 from packages.collectooor.skills.monitor.models import Requests
 from packages.fetchai.connections.http_client.connection import (
@@ -42,11 +47,18 @@ from packages.fetchai.connections.http_client.connection import (
 from packages.fetchai.connections.ledger.base import CONNECTION_ID as LEDGER_API_ADDRESS
 from packages.fetchai.protocols.contract_api import ContractApiMessage
 from packages.fetchai.protocols.http import HttpMessage
-from packages.fetchai.protocols.signing.custom_types import Terms
+from packages.fetchai.protocols.ledger_api import LedgerApiMessage
+from packages.fetchai.protocols.signing import SigningMessage
+from packages.fetchai.protocols.signing.custom_types import (
+    RawMessage,
+    RawTransaction,
+    SignedTransaction,
+    Terms,
+)
 from packages.valory.contracts.gnosis_safe.contract import GnosisSafeContract
 
 
-class Monitoring(Behaviour):
+class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
     """This class scaffolds a behaviour."""
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -56,8 +68,14 @@ class Monitoring(Behaviour):
         self.project_details: Optional[dict] = None
         self.is_request_in_flight = False
         self.artblocks_contract = "0x1cd623a86751d4c4f20c96000fec763941f098a2"
+        self.artblocks_periphery_contract = "0x58727f5fc3705c30c9adc2bccc787ab2ba24c441"
         self.safe_contract = "0x2cab92c1e9d2a701ca0411b0ff35a0907ca31f7f"
         self.data: Optional[bytes] = None
+        self.gnosis_hash: Optional[str] = None
+        self.signed_message: Optional[bytes] = None
+        self.raw_transaction: Optional[RawTransaction] = None
+        self.signed_transaction: Optional[SignedTransaction] = None
+        self.tx_digest: Optional[str] = None
 
     def setup(self) -> None:
         """Implement the setup."""
@@ -72,26 +90,57 @@ class Monitoring(Behaviour):
                 contract_id=str(ArtBlocksContract.contract_id),
                 contract_callable="get_active_project",
             )
-        if self.active_project is not None and self.data is None:
-            value = 1
+        if self.active_project is not None and self.data is None and not self.is_request_in_flight:
             self.send_contract_api_request(
-                request_callback=self.handle_active_project_id,
+                request_callback=self.handle_purchase_data,
                 performative=ContractApiMessage.Performative.GET_STATE,  # type: ignore
-                contract_address=self.artblocks_contract,
+                contract_address=self.artblocks_periphery_contract,
                 contract_id=str(ArtBlocksPeripheryContract.contract_id),
                 contract_callable="purchase_data",
-                to_address=self.context.agent_address,
-                value=value,
+                project_id=self.active_project,
             )
-            # self.send_contract_api_request(
-            #     performative=ContractApiMessage.Performative.GET_RAW_TRANSACTION,  # type: ignore
-            #     contract_address=self.safe_contract,
-            #     contract_id=str(GnosisSafeContract.contract_id),
-            #     contract_callable="get_raw_safe_transaction_hash",
-            #     to_address=self.artblocks_contract,
-            #     value=value,
-            #     data=data,
-            # )
+        if self.data is not None and self.project_details is not None and self.gnosis_hash is None and not self.is_request_in_flight:
+            self.send_contract_api_request(
+                request_callback=self.handle_gnosis_hash,
+                performative=ContractApiMessage.Performative.GET_RAW_TRANSACTION,  # type: ignore
+                contract_address=self.safe_contract,
+                contract_id=str(GnosisSafeContract.contract_id),
+                contract_callable="get_raw_safe_transaction_hash",
+                to_address=self.artblocks_periphery_contract,
+                value=self.project_details["price_per_token_in_wei"],
+                data=self.data,
+            )
+        if self.gnosis_hash is not None and self.signed_message is None and not self.is_request_in_flight:
+            safe_tx_hash_bytes = binascii.unhexlify(self.gnosis_hash)
+            self.send_signing_request(
+                request_callback=self.handle_signing_message_response,
+                raw_message=safe_tx_hash_bytes,
+                is_deprecated_mode=True,
+            )
+        if self.signed_message is not None and self.project_details is not None and self.raw_transaction is None and not self.is_request_in_flight:
+            self.send_contract_api_request(
+                request_callback=self.handle_gnosis_tx,
+                performative=ContractApiMessage.Performative.GET_RAW_TRANSACTION,  # type: ignore
+                contract_address=self.safe_contract,
+                contract_id=str(GnosisSafeContract.contract_id),
+                contract_callable="get_raw_safe_transaction",
+                sender_address=self.context.agent_address,
+                owners=tuple(self.context.agent_address),
+                to_address=self.artblocks_periphery_contract,
+                value=self.project_details["price_per_token_in_wei"],
+                data=self.data,
+                signatures_by_owner={self.context.agent_address: self.gnosis_hash},
+            )
+        if self.raw_transaction is not None and self.signed_transaction is None and not self.is_request_in_flight:
+            self.send_transaction_signing_request(
+                request_callback=self.handle_signing_transaction_response,
+                raw_transaction=self.raw_transaction,
+            )
+        if self.signed_transaction is not None and not self.is_request_in_flight:
+            self.send_transaction_request(
+                request_callback=self.handle_transaction_response,
+                signed_transaction=self.signed_transaction,
+            )
 
     def teardown(self) -> None:
         """Implement the task teardown."""
@@ -153,6 +202,33 @@ class Monitoring(Behaviour):
         if project_id is not None:
             self.project_details = message.state.body
             self.context.logger.info(f"found project: {self.project_details}")
+
+    def handle_purchase_data(self, message: ContractApiMessage) -> None:
+        """Callback handler for the purchase data request."""
+        self.is_request_in_flight = False
+        if not message.performative == ContractApiMessage.Performative.STATE:
+            raise ValueError("wrong performative")
+        data = cast(Optional[bytes], message.state.body["data"])
+        self.data = data
+        self.context.logger.info(f"found data: {str(self.data)}")
+
+    def handle_gnosis_hash(self, message: ContractApiMessage) -> None:
+        """Callback handler for the gnosis hash request."""
+        self.is_request_in_flight = False
+        if not message.performative == ContractApiMessage.Performative.STATE:
+            raise ValueError("wrong performative")
+        gnosis_hash = cast(Optional[str], message.state.body["tx_hash"])
+        self.gnosis_hash = gnosis_hash
+        self.context.logger.info(f"found data: {self.gnosis_hash}")
+
+    def handle_gnosis_tx(self, message: ContractApiMessage) -> None:
+        """Callback handler for the gnosis tx request."""
+        self.is_request_in_flight = False
+        if not message.performative == ContractApiMessage.Performative.GET_RAW_TRANSACTION:
+            raise ValueError("wrong performative")
+        raw_tx = message.raw_transaction
+        self.raw_transaction = raw_tx
+        self.context.logger.info(f"found raw transaciton: {self.raw_transaction}")
 
     @classmethod
     def _get_request_nonce_from_dialogue(cls, dialogue: Dialogue) -> str:
@@ -223,3 +299,124 @@ class Monitoring(Behaviour):
         request_http_message = cast(HttpMessage, request_http_message)
         http_dialogue = cast(HttpDialogue, http_dialogue)
         return request_http_message, http_dialogue
+
+    def send_signing_request(
+        self, request_callback: Callable, raw_message: bytes, is_deprecated_mode: bool = False
+    ) -> None:
+        """Send a signing request."""
+        signing_dialogues = cast(SigningDialogues, self.context.signing_dialogues)
+        signing_msg, signing_dialogue = signing_dialogues.create(
+            counterparty=self.context.decision_maker_address,
+            performative=SigningMessage.Performative.SIGN_MESSAGE,
+            raw_message=RawMessage(
+                self.context.default_ledger_id,
+                raw_message,
+                is_deprecated_mode=is_deprecated_mode,
+            ),
+            terms=Terms(
+                ledger_id=self.context.default_ledger_id,
+                sender_address="",
+                counterparty_address="",
+                amount_by_currency_id={},
+                quantities_by_good_id={},
+                nonce="",
+            ),
+        )
+        request_nonce = self._get_request_nonce_from_dialogue(signing_dialogue)
+        cast(Requests, self.context.requests).request_id_to_callback[
+            request_nonce
+        ] = request_callback
+        self.context.decision_maker_message_queue.put_nowait(signing_msg)
+        self.is_request_in_flight = True
+
+    def handle_signing_message_response(self, message: SigningMessage) -> None:
+        """Callback handler for the gnosis hash request."""
+        self.is_request_in_flight = False
+        if not message.performative == SigningMessage.Performative.SIGNED_MESSAGE:
+            raise ValueError("wrong performative")
+        signed_message = cast(Optional[bytes], message.signed_message.body)
+        self.signed_message = signed_message
+        self.context.logger.info(f"found signed_message: {str(self.signed_message)}")
+
+    def send_transaction_signing_request(
+        self, request_callback: Callable, raw_transaction: RawTransaction,
+    ) -> None:
+        """Send a transaction signing request."""
+        signing_dialogues = cast(SigningDialogues, self.context.signing_dialogues)
+        terms = Terms(
+            self.context.default_ledger_id,
+            self.context.agent_address,
+            counterparty_address="",
+            amount_by_currency_id={},
+            quantities_by_good_id={},
+            nonce="",
+        )
+        signing_msg, signing_dialogue = signing_dialogues.create(
+            counterparty=self.context.decision_maker_address,
+            performative=SigningMessage.Performative.SIGN_TRANSACTION,
+            raw_transaction=raw_transaction,
+            terms=terms,
+        )
+        signing_dialogue = cast(SigningDialogue, signing_dialogue)
+        request_nonce = self._get_request_nonce_from_dialogue(signing_dialogue)
+        cast(Requests, self.context.requests).request_id_to_callback[
+            request_nonce
+        ] = request_callback
+        self.context.decision_maker_message_queue.put_nowait(signing_msg)
+        self.is_request_in_flight = True
+
+    def handle_signing_transaction_response(self, message: SigningMessage) -> None:
+        """Callback handler for the gnosis hash request."""
+        self.is_request_in_flight = False
+        if not message.performative == SigningMessage.Performative.SIGNED_TRANSACTION:
+            raise ValueError("wrong performative")
+        signed_transaction = message.signed_transaction
+        self.signed_transaction = signed_transaction
+        self.context.logger.info(f"found signed_transaction: {self.signed_transaction}")
+
+    def send_transaction_request(self, request_callback: Callable, signed_transaction: SignedTransaction) -> None:
+        """Send a transaction request."""
+        ledger_api_dialogues = cast(
+            LedgerApiDialogues, self.context.ledger_api_dialogues
+        )
+        ledger_api_msg, ledger_api_dialogue = ledger_api_dialogues.create(
+            counterparty=str(LEDGER_API_ADDRESS),
+            performative=LedgerApiMessage.Performative.SEND_SIGNED_TRANSACTION,
+            signed_transaction=signed_transaction,
+        )
+        ledger_api_dialogue = cast(LedgerApiDialogue, ledger_api_dialogue)
+        request_nonce = self._get_request_nonce_from_dialogue(ledger_api_dialogue)
+        cast(Requests, self.context.requests).request_id_to_callback[
+            request_nonce
+        ] = request_callback
+        self.context.outbox.put_message(message=ledger_api_msg)
+        self.is_request_in_flight = True
+
+    def handle_transaction_response(self, message: LedgerApiMessage) -> None:
+        """Callback handler for the gnosis hash request."""
+        self.is_request_in_flight = False
+        if not message.performative == LedgerApiMessage.Performative.TRANSACTION_DIGEST:
+            raise ValueError("wrong performative")
+        tx_digest = cast(Optional[str], message.transaction_digest.body)
+        self.tx_digest = tx_digest
+        self.context.logger.info(f"found signed_transaction: {self.tx_digest}")
+
+    def send_transaction_receipt_request(
+        self, request_callback: Callable, ledger_api_msg_: LedgerApiMessage
+    ) -> None:
+        """Send a transaction receipt request."""
+        ledger_api_dialogues = cast(
+            LedgerApiDialogues, self.context.ledger_api_dialogues
+        )
+        ledger_api_msg, ledger_api_dialogue = ledger_api_dialogues.create(
+            counterparty=str(LEDGER_API_ADDRESS),
+            performative=LedgerApiMessage.Performative.GET_TRANSACTION_RECEIPT,
+            transaction_digest=ledger_api_msg_.transaction_digest,
+        )
+        ledger_api_dialogue = cast(LedgerApiDialogue, ledger_api_dialogue)
+        request_nonce = self._get_request_nonce_from_dialogue(ledger_api_dialogue)
+        cast(Requests, self.context.requests).request_id_to_callback[
+            request_nonce
+        ] = request_callback
+        self.context.outbox.put_message(message=ledger_api_msg)
+        self.context.logger.info("sending transaction receipt request.")

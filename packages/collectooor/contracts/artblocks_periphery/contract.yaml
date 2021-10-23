@@ -1,0 +1,16 @@
+name: artblocks_periphery
+author: collectooor
+version: 0.1.0
+type: contract
+description: The artblocks minter contract interface.
+license: Apache-2.0
+aea_version: '>=1.0.0, <2.0.0'
+fingerprint:
+  __init__.py: QmVNNroAeW12n3dHkBeLxMYPad1jcuPPg3wfEdck9fMMnK
+  build/Minter.json: Qmf83kL4kge9yHgV5nKupVfRWExgoVSkwwbCWY485y2fir
+  contract.py: QmUSfkrChGC5ZyJh2YnnMaBDx4CNjBvn7dXdD11b6EqHc7
+fingerprint_ignore_patterns: []
+class_name: ArtBlocksPeripheryContract
+contract_interface_paths:
+  ethereum: build/Minter.json
+dependencies: {}
