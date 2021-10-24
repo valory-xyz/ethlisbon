@@ -161,7 +161,11 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
                 request_callback=self.handle_signing_transaction_response,
                 raw_transaction=self.raw_transaction,
             )
-        if self.signed_transaction is not None and not self.is_request_in_flight:
+        if (
+            self.signed_transaction is not None
+            and self.tx_digest is None
+            and not self.is_request_in_flight
+        ):
             self.send_transaction_request(
                 request_callback=self.handle_transaction_response,
                 signed_transaction=self.signed_transaction,
@@ -266,7 +270,7 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
             raise ValueError("wrong performative")
         raw_tx = message.raw_transaction
         self.raw_transaction = raw_tx
-        self.context.logger.info(f"found raw transaciton: {self.raw_transaction}")
+        self.context.logger.info(f"found raw transaction: {self.raw_transaction}")
 
     @classmethod
     def _get_request_nonce_from_dialogue(cls, dialogue: Dialogue) -> str:
@@ -444,7 +448,7 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
             raise ValueError("wrong performative")
         tx_digest = cast(Optional[str], message.transaction_digest.body)
         self.tx_digest = tx_digest
-        self.context.logger.info(f"found signed_transaction: {self.tx_digest}")
+        self.context.logger.info(f"found tx_digest: {self.tx_digest}")
 
     def send_transaction_receipt_request(
         self, request_callback: Callable, ledger_api_msg_: LedgerApiMessage
