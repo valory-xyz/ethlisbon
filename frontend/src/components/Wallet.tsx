@@ -13,7 +13,7 @@ function Wallet() {
         {isAuthenticated ? (
           <Button onClick={() => logout()}>Disconnect</Button>
         ) : (
-          <Button onClick={() => authenticate()}>Connect MetaMask</Button>
+          <Button onClick={() => authenticate()}>Connect MetaMask (to Ropsten)</Button>
         )}
       </Box>
     </>

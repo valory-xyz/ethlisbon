@@ -93,22 +93,25 @@ export const App = () => {
             </Flex>
             <Box>
               <Grid templateColumns="repeat(3, 1fr)" gap={6}>
+                {/* <pre>{JSON.stringify(dataNFTs?.result,undefined, 2)}</pre> */}
                 {isLoadingNFTs
                   ? 'Loading NFTs...'
                   : !error
                   ? dataNFTs?.result
-                      ?.filter((nft) => nft.name === 'Art Blocks')
+                      // ?.filter((nft) => nft.name === 'Art Blocks')
                       .filter((nft, i) => i < 1)
                       .map((nft) => {
                         const metadata = JSON.parse(nft?.metadata || '{}')
 
                         return (
                           <Box key={nft.token_id}>
-                            <Heading size="sm">{metadata.name}</Heading>
-                            <Text mb={2}>Last sale price: 5ETH</Text>
+                            {/* <Heading size="sm">{metadata.name}</Heading> */}
+                            <Heading size="sm" mb={2}>Token ID: {nft.token_id}</Heading>
+                            {/* <Text mb={2}>Last sale price: 5ETH</Text> */}
                             {/* <Text mb={2}>{JSON.stringify(metadata)}</Text> */}
                             <Img
-                              src={`https://api.artblocks.io/image/${metadata.tokenID}`}
+                              // src={`https://api.artblocks.io/image/${metadata.tokenID}`}
+                              src="https://i.imgur.com/3FFNmAg.png"
                             />
                           </Box>
                         )
