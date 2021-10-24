@@ -102,5 +102,5 @@ class ArtBlocksPeripheryContract(Contract):
         :return: the tx  # noqa: DAR202
         """
         instance = cls.get_instance(ledger_api, contract_address)
-        data = instance.encodeABI(fn_name='purchase', args=[project_id])
+        data = instance.encodeABI(fn_name="purchase", args=[project_id])
         return {"data": data}

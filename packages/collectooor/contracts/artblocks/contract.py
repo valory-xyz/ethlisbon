@@ -19,7 +19,7 @@
 
 """This module contains the scaffold contract definition."""
 
-from typing import Any
+from typing import Any, Optional
 
 from aea.common import JSONLike
 from aea.configurations.base import PublicId
@@ -88,7 +88,7 @@ class ArtBlocksContract(Contract):
         cls,  # pylint: disable=unused-argument
         ledger_api: LedgerApi,
         contract_address: str,
-        **kwargs: Any
+        starting_id: Optional[int] = None,
     ) -> JSONLike:
         """
         Handler method for the 'get_active_project' requests.
@@ -98,12 +98,15 @@ class ArtBlocksContract(Contract):
 
         :param ledger_api: the ledger apis.
         :param contract_address: the contract address.
-        :param kwargs: the keyword arguments.
+        :param starting_id: the starting id of projects from which to work backwards.
         :return: the tx  # noqa: DAR202
         """
         instance = cls.get_instance(ledger_api, contract_address)
-        next_project_id = instance.functions.nextProjectId().call()
-        project_id = next_project_id - 1
+        if starting_id is None:
+            next_project_id = instance.functions.nextProjectId().call()
+            project_id = next_project_id - 1
+        else:
+            project_id = starting_id - 1
         while project_id > 0:
             project_info = instance.functions.projectTokenInfo(project_id).call()
             # check if active
@@ -116,7 +119,9 @@ class ArtBlocksContract(Contract):
         if project_id == 0:
             return {"project_id": None}
         project_details = instance.functions.projectDetails(project_id).call()
-        project_script = instance.functions.projectScriptByIndex(project_id, script_info[1] - 1).call()
+        project_script = instance.functions.projectScriptByIndex(
+            project_id, script_info[1] - 1
+        ).call()
         result = {
             "artist_address": project_info[0],
             "price_per_token_in_wei": project_info[1],

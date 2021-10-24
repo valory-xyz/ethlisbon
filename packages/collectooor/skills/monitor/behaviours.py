@@ -64,15 +64,17 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
     def __init__(self, *args: Any, **kwargs: Any):
         """Init the monitoring behaviour."""
         super().__init__(*args, **kwargs)
+        self.max_eth_in_wei = 1000000000000000000
+        self.starting_id: Optional[int] = None
         self.active_project: Optional[int] = None
         self.project_details: Optional[dict] = None
         self.is_request_in_flight = False
-        self.artblocks_contract = "0x1cd623a86751d4c4f20c96000fec763941f098a2"
-        self.artblocks_periphery_contract = "0x58727f5fc3705c30c9adc2bccc787ab2ba24c441"
-        self.safe_contract = "0x2cab92c1e9d2a701ca0411b0ff35a0907ca31f7f"
+        self.artblocks_contract = "0x1CD623a86751d4C4f20c96000FEC763941f098A2"
+        self.artblocks_periphery_contract = "0x58727f5Fc3705C30C9aDC2bcCC787AB2BA24c441"
+        self.safe_contract = "0x2caB92c1E9D2a701Ca0411b0ff35A0907Ca31F7f"
         self.data: Optional[bytes] = None
         self.gnosis_hash: Optional[str] = None
-        self.signed_message: Optional[bytes] = None
+        self.signed_message: Optional[str] = None
         self.raw_transaction: Optional[RawTransaction] = None
         self.signed_transaction: Optional[SignedTransaction] = None
         self.tx_digest: Optional[str] = None
@@ -89,8 +91,13 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
                 contract_address=self.artblocks_contract,
                 contract_id=str(ArtBlocksContract.contract_id),
                 contract_callable="get_active_project",
+                starting_id=self.starting_id,
             )
-        if self.active_project is not None and self.data is None and not self.is_request_in_flight:
+        if (
+            self.active_project is not None
+            and self.data is None
+            and not self.is_request_in_flight
+        ):
             self.send_contract_api_request(
                 request_callback=self.handle_purchase_data,
                 performative=ContractApiMessage.Performative.GET_STATE,  # type: ignore
@@ -99,10 +106,15 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
                 contract_callable="purchase_data",
                 project_id=self.active_project,
             )
-        if self.data is not None and self.project_details is not None and self.gnosis_hash is None and not self.is_request_in_flight:
+        if (
+            self.data is not None
+            and self.project_details is not None
+            and self.gnosis_hash is None
+            and not self.is_request_in_flight
+        ):
             self.send_contract_api_request(
                 request_callback=self.handle_gnosis_hash,
-                performative=ContractApiMessage.Performative.GET_RAW_TRANSACTION,  # type: ignore
+                performative=ContractApiMessage.Performative.GET_STATE,  # type: ignore
                 contract_address=self.safe_contract,
                 contract_id=str(GnosisSafeContract.contract_id),
                 contract_callable="get_raw_safe_transaction_hash",
@@ -110,14 +122,23 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
                 value=self.project_details["price_per_token_in_wei"],
                 data=self.data,
             )
-        if self.gnosis_hash is not None and self.signed_message is None and not self.is_request_in_flight:
+        if (
+            self.gnosis_hash is not None
+            and self.signed_message is None
+            and not self.is_request_in_flight
+        ):
             safe_tx_hash_bytes = binascii.unhexlify(self.gnosis_hash)
             self.send_signing_request(
                 request_callback=self.handle_signing_message_response,
                 raw_message=safe_tx_hash_bytes,
                 is_deprecated_mode=True,
             )
-        if self.signed_message is not None and self.project_details is not None and self.raw_transaction is None and not self.is_request_in_flight:
+        if (
+            self.signed_message is not None
+            and self.project_details is not None
+            and self.raw_transaction is None
+            and not self.is_request_in_flight
+        ):
             self.send_contract_api_request(
                 request_callback=self.handle_gnosis_tx,
                 performative=ContractApiMessage.Performative.GET_RAW_TRANSACTION,  # type: ignore
@@ -125,13 +146,17 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
                 contract_id=str(GnosisSafeContract.contract_id),
                 contract_callable="get_raw_safe_transaction",
                 sender_address=self.context.agent_address,
-                owners=tuple(self.context.agent_address),
+                owners=(self.context.agent_address,),
                 to_address=self.artblocks_periphery_contract,
                 value=self.project_details["price_per_token_in_wei"],
                 data=self.data,
-                signatures_by_owner={self.context.agent_address: self.gnosis_hash},
+                signatures_by_owner={self.context.agent_address: self.signed_message},
             )
-        if self.raw_transaction is not None and self.signed_transaction is None and not self.is_request_in_flight:
+        if (
+            self.raw_transaction is not None
+            and self.signed_transaction is None
+            and not self.is_request_in_flight
+        ):
             self.send_transaction_signing_request(
                 request_callback=self.handle_signing_transaction_response,
                 raw_transaction=self.raw_transaction,
@@ -198,10 +223,23 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
         if not message.performative == ContractApiMessage.Performative.STATE:
             raise ValueError("wrong performative")
         project_id = cast(Optional[int], message.state.body["project_id"])
+        if project_id is None:
+            return
+        project_details = message.state.body
+        if not self.is_acceptable_project(project_details):
+            self.context.logger.info(
+                f"found unsuitable project: {project_details}. Continue searching..."
+            )
+            self.starting_id = project_id
+            return
         self.active_project = project_id
-        if project_id is not None:
-            self.project_details = message.state.body
-            self.context.logger.info(f"found project: {self.project_details}")
+        self.project_details = project_details
+        self.context.logger.info(f"found suitable project: {self.project_details}.")
+
+    def is_acceptable_project(self, project_details: dict) -> bool:
+        """Check if we can accept the project."""
+        # very simplified atm, just checking for price to be max 1 ETH
+        return project_details["price_per_token_in_wei"] <= self.max_eth_in_wei
 
     def handle_purchase_data(self, message: ContractApiMessage) -> None:
         """Callback handler for the purchase data request."""
@@ -217,14 +255,14 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
         self.is_request_in_flight = False
         if not message.performative == ContractApiMessage.Performative.STATE:
             raise ValueError("wrong performative")
-        gnosis_hash = cast(Optional[str], message.state.body["tx_hash"])
-        self.gnosis_hash = gnosis_hash
-        self.context.logger.info(f"found data: {self.gnosis_hash}")
+        gnosis_hash = cast(str, message.state.body["tx_hash"])
+        self.gnosis_hash = gnosis_hash[2:]
+        self.context.logger.info(f"found tx_hash: {self.gnosis_hash}")
 
     def handle_gnosis_tx(self, message: ContractApiMessage) -> None:
         """Callback handler for the gnosis tx request."""
         self.is_request_in_flight = False
-        if not message.performative == ContractApiMessage.Performative.GET_RAW_TRANSACTION:
+        if not message.performative == ContractApiMessage.Performative.RAW_TRANSACTION:
             raise ValueError("wrong performative")
         raw_tx = message.raw_transaction
         self.raw_transaction = raw_tx
@@ -301,7 +339,10 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
         return request_http_message, http_dialogue
 
     def send_signing_request(
-        self, request_callback: Callable, raw_message: bytes, is_deprecated_mode: bool = False
+        self,
+        request_callback: Callable,
+        raw_message: bytes,
+        is_deprecated_mode: bool = False,
     ) -> None:
         """Send a signing request."""
         signing_dialogues = cast(SigningDialogues, self.context.signing_dialogues)
@@ -334,12 +375,14 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
         self.is_request_in_flight = False
         if not message.performative == SigningMessage.Performative.SIGNED_MESSAGE:
             raise ValueError("wrong performative")
-        signed_message = cast(Optional[bytes], message.signed_message.body)
-        self.signed_message = signed_message
-        self.context.logger.info(f"found signed_message: {str(self.signed_message)}")
+        signed_message = cast(str, message.signed_message.body)
+        self.signed_message = signed_message[2:]
+        self.context.logger.info(f"found signed_message: {self.signed_message}")
 
     def send_transaction_signing_request(
-        self, request_callback: Callable, raw_transaction: RawTransaction,
+        self,
+        request_callback: Callable,
+        raw_transaction: RawTransaction,
     ) -> None:
         """Send a transaction signing request."""
         signing_dialogues = cast(SigningDialogues, self.context.signing_dialogues)
@@ -374,7 +417,9 @@ class Monitoring(Behaviour):  # pylint: disable=too-many-instance-attributes
         self.signed_transaction = signed_transaction
         self.context.logger.info(f"found signed_transaction: {self.signed_transaction}")
 
-    def send_transaction_request(self, request_callback: Callable, signed_transaction: SignedTransaction) -> None:
+    def send_transaction_request(
+        self, request_callback: Callable, signed_transaction: SignedTransaction
+    ) -> None:
         """Send a transaction request."""
         ledger_api_dialogues = cast(
             LedgerApiDialogues, self.context.ledger_api_dialogues

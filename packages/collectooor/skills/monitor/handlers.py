@@ -126,7 +126,7 @@ class AbstractResponseHandler(Handler, ABC):
     def _handle_missing_dialogues(self) -> None:
         """Handle missing dialogues in context."""
         expected_attribute_name = self._get_dialogues_attribute_name()
-        self.context.logger.info(
+        self.context.logger.warning(
             "cannot find Dialogues object in skill context with attribute name: %s",
             expected_attribute_name,
         )
@@ -137,7 +137,7 @@ class AbstractResponseHandler(Handler, ABC):
 
         :param message: the unidentified message to be handled
         """
-        self.context.logger.info(
+        self.context.logger.warning(
             "received invalid message: unidentified dialogue. message=%s", message
         )
 
@@ -168,7 +168,9 @@ class AbstractResponseHandler(Handler, ABC):
 
     def _log_message_handling(self, message: Message) -> None:
         """Log the handling of the message."""
-        self.context.logger.info("calling registered callback with message=%s", message)
+        self.context.logger.debug(
+            "calling registered callback with message=%s", message
+        )
 
 
 class HttpHandler(AbstractResponseHandler):

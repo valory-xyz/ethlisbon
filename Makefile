@@ -38,7 +38,7 @@ clean-test:
 
 .PHONY: lint
 lint:
-	black packages/collectooor/contracts/artblocks packages/collectooor/skills/monitor
+	black packages/collectooor/contracts packages/collectooor/skills/monitor
 	isort packages/collectooor
 	flake8 packages/collectooor
 	darglint packages/collectooor
