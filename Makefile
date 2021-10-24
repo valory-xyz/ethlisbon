@@ -38,7 +38,7 @@ clean-test:
 
 .PHONY: lint
 lint:
-	black packages/collectooor/contracts/artblocks packages/collectooor/skills/monitor
+	black packages/collectooor/contracts packages/collectooor/skills/monitor
 	isort packages/collectooor
 	flake8 packages/collectooor
 	darglint packages/collectooor
@@ -75,7 +75,8 @@ new_agent:
 	rm -rf collectooor
 	aea fingerprint by-path packages/collectooor/skills/monitor
 	aea fingerprint by-path packages/collectooor/contracts/artblocks
+	aea fingerprint by-path packages/collectooor/contracts/artblocks_periphery
 	aea fetch --local collectooor/collectooor
 	cp config/ethereum_private_key.txt collectooor/ethereum_private_key.txt
 	cd collectooor; aea add-key ethereum
-	cd collectooor; aea config set vendor.fetchai.connections.ledger.config.ledger_apis.ethereum.address https://eth-ropsten.gateway.pokt.network/v1/lb/6173ebc0e190010034959f9a
+	cd collectooor; aea config set vendor.fetchai.connections.ledger.config.ledger_apis.ethereum.address https://ropsten.infura.io/v3/2980beeca3544c9fbace4f24218afcd4

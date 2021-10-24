@@ -12,6 +12,9 @@ connections:
 - fetchai/ledger:0.18.0
 contracts:
 - collectooor/artblocks:0.1.0
+- collectooor/artblocks_periphery:0.1.0
+- valory/gnosis_safe:0.1.0
+- valory/gnosis_safe_proxy_factory:0.1.0
 protocols:
 - fetchai/contract_api:1.0.0
 - fetchai/default:1.0.0
