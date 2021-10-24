@@ -7,7 +7,7 @@ license: Apache-2.0
 aea_version: '>=1.0.0, <2.0.0'
 fingerprint:
   __init__.py: QmYGUBJKouqca4JAyxX8R9STbHxqMq9Y2iTiL3LxjUKgyZ
-  behaviours.py: QmNjB26cghaY3BPTQZ5LrMAv7iBMBTbi5wuLQFqNJpbSMd
+  behaviours.py: QmYEqMTpmedytVBRmeXUAbWK4LVBUVRC53v5qZXV8Kt6Hy
   dialogues.py: QmRHPT8fxLFjejfDB98GepjJe8is2g4kYGchJm66iY9v57
   handlers.py: QmbUfijEUgL1oywCRMUGtGzPC2aJ9grx4U5Bc9eedH5RN5
   models.py: QmTme7yEW2SZmnKEsTgq9DVCJasNGFFfhAyRcQdAC64YV3
@@ -18,7 +18,13 @@ protocols: []
 skills: []
 behaviours:
   monitoring:
-    args: {}
+    args:
+      artblocks_contract: '0x1CD623a86751d4C4f20c96000FEC763941f098A2'
+      artblocks_periphery_contract: '0x58727f5Fc3705C30C9aDC2bcCC787AB2BA24c441'
+      max_eth_in_wei: 1000000000000000000
+      safe_contract: '0x2caB92c1E9D2a701Ca0411b0ff35A0907Ca31F7f'
+      safe_tx_gas: 4000000
+      tick_interval: 0.5
     class_name: Monitoring
 handlers:
   contract_api:
