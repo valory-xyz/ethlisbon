@@ -23,3 +23,16 @@ An agent that continously watches [ArtBlocks](artblocks.io) for new drops and pa
       cd frontend
       yarn
       yarn start
+
+- To instantiate custom Gnosis Safe
+      - add your env variables
+      - add network relevant Gnosis contracts
+      - add owners and quorum threshold
+      - run:
+            cd config/safe
+            npm i
+            npm run build
+            npm run deploy
+
+
+
