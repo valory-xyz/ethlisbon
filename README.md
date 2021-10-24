@@ -17,3 +17,9 @@ An agent that continously watches [ArtBlocks](artblocks.io) for new drops and pa
       make new_agent
       cd collectooor
       aea run
+
+- To run frontend (on https://localhost:3000):
+
+      cd frontend
+      yarn
+      yarn start
