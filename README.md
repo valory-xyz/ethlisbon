@@ -2,6 +2,8 @@
 
 An agent that continously watches [ArtBlocks](artblocks.io) for new drops and participates in the auction to mint new NFTs.
 
+More details [here on DevPost](https://devpost.com/software/el-collectooorr).
+
 ## Setup:
 
 - For Python development of the AEA collectooor run
