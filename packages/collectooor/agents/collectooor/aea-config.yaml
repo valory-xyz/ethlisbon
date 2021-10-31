@@ -8,7 +8,6 @@ aea_version: '>=1.1.0, <2.0.0'
 fingerprint: {}
 fingerprint_ignore_patterns: []
 connections:
-- fetchai/http_client:0.22.0
 - fetchai/ledger:0.18.0
 contracts:
 - collectooor/artblocks:0.1.0
@@ -17,11 +16,8 @@ contracts:
 - valory/gnosis_safe_proxy_factory:0.1.0
 protocols:
 - fetchai/contract_api:1.0.0
-- fetchai/default:1.0.0
-- fetchai/http:1.0.0
 - fetchai/ledger_api:1.0.0
-- fetchai/signing:1.0.0
-- fetchai/state_update:1.0.0
+- open_aea/signing:1.0.0
 skills:
 - collectooor/monitor:0.1.0
 default_ledger: ethereum
@@ -34,5 +30,5 @@ logging_config:
   disable_existing_loggers: false
   version: 1
 dependencies:
-  aea-ledger-ethereum: {}
+  open-aea-ledger-ethereum: {}
 default_connection: null

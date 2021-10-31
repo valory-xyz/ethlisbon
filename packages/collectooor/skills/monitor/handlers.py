@@ -29,9 +29,8 @@ from aea.skills.base import Handler
 
 from packages.collectooor.skills.monitor.models import Requests
 from packages.fetchai.protocols.contract_api import ContractApiMessage
-from packages.fetchai.protocols.http import HttpMessage
 from packages.fetchai.protocols.ledger_api import LedgerApiMessage
-from packages.fetchai.protocols.signing import SigningMessage
+from packages.open_aea.protocols.signing import SigningMessage
 
 
 class AbstractResponseHandler(Handler, ABC):
@@ -159,7 +158,7 @@ class AbstractResponseHandler(Handler, ABC):
         Handle no callback found.
 
         :param _message: the message to be handled
-        :param dialogue: the http dialogue
+        :param dialogue: the dialogue
         """
         request_nonce = dialogue.dialogue_label.dialogue_reference[0]
         self.context.logger.warning(
@@ -171,13 +170,6 @@ class AbstractResponseHandler(Handler, ABC):
         self.context.logger.debug(
             "calling registered callback with message=%s", message
         )
-
-
-class HttpHandler(AbstractResponseHandler):
-    """The HTTP response handler."""
-
-    SUPPORTED_PROTOCOL: Optional[PublicId] = HttpMessage.protocol_id
-    allowed_response_performatives = frozenset({HttpMessage.Performative.RESPONSE})
 
 
 class SigningHandler(AbstractResponseHandler):

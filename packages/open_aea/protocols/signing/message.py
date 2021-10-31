@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------------------------
 #
-#   Copyright 2021 fetchai
+#   Copyright 2021 open_aea
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #
 # ------------------------------------------------------------------------------
 
-"""This module contains http's message definition."""
+"""This module contains signing's message definition."""
 
 # pylint: disable=too-many-statements,too-many-locals,no-member,too-few-public-methods,too-many-branches,not-an-iterable,unidiomatic-typecheck,unsubscriptable-object
 import logging
@@ -27,44 +27,81 @@ from aea.configurations.base import PublicId
 from aea.exceptions import AEAEnforceError, enforce
 from aea.protocols.base import Message
 
+from packages.open_aea.protocols.signing.custom_types import (
+    ErrorCode as CustomErrorCode,
+)
+from packages.open_aea.protocols.signing.custom_types import (
+    RawMessage as CustomRawMessage,
+)
+from packages.open_aea.protocols.signing.custom_types import (
+    RawTransaction as CustomRawTransaction,
+)
+from packages.open_aea.protocols.signing.custom_types import (
+    SignedMessage as CustomSignedMessage,
+)
+from packages.open_aea.protocols.signing.custom_types import (
+    SignedTransaction as CustomSignedTransaction,
+)
+from packages.open_aea.protocols.signing.custom_types import Terms as CustomTerms
 
-_default_logger = logging.getLogger("aea.packages.fetchai.protocols.http.message")
+
+_default_logger = logging.getLogger("aea.packages.open_aea.protocols.signing.message")
 
 DEFAULT_BODY_SIZE = 4
 
 
-class HttpMessage(Message):
-    """A protocol for HTTP requests and responses."""
+class SigningMessage(Message):
+    """A protocol for communication between skills and decision maker."""
 
-    protocol_id = PublicId.from_str("fetchai/http:1.0.0")
-    protocol_specification_id = PublicId.from_str("fetchai/http:1.0.0")
+    protocol_id = PublicId.from_str("open_aea/signing:1.0.0")
+    protocol_specification_id = PublicId.from_str("open_aea/signing:1.0.0")
+
+    ErrorCode = CustomErrorCode
+
+    RawMessage = CustomRawMessage
+
+    RawTransaction = CustomRawTransaction
+
+    SignedMessage = CustomSignedMessage
+
+    SignedTransaction = CustomSignedTransaction
+
+    Terms = CustomTerms
 
     class Performative(Message.Performative):
-        """Performatives for the http protocol."""
+        """Performatives for the signing protocol."""
 
-        REQUEST = "request"
-        RESPONSE = "response"
+        ERROR = "error"
+        SIGN_MESSAGE = "sign_message"
+        SIGN_TRANSACTION = "sign_transaction"
+        SIGNED_MESSAGE = "signed_message"
+        SIGNED_TRANSACTION = "signed_transaction"
 
         def __str__(self) -> str:
             """Get the string representation."""
             return str(self.value)
 
-    _performatives = {"request", "response"}
+    _performatives = {
+        "error",
+        "sign_message",
+        "sign_transaction",
+        "signed_message",
+        "signed_transaction",
+    }
     __slots__: Tuple[str, ...] = tuple()
 
     class _SlotsCls:
         __slots__ = (
-            "body",
             "dialogue_reference",
-            "headers",
+            "error_code",
             "message_id",
-            "method",
             "performative",
-            "status_code",
-            "status_text",
+            "raw_message",
+            "raw_transaction",
+            "signed_message",
+            "signed_transaction",
             "target",
-            "url",
-            "version",
+            "terms",
         )
 
     def __init__(
@@ -76,7 +113,7 @@ class HttpMessage(Message):
         **kwargs: Any,
     ):
         """
-        Initialise an instance of HttpMessage.
+        Initialise an instance of SigningMessage.
 
         :param message_id: the message id.
         :param dialogue_reference: the dialogue reference.
@@ -87,7 +124,7 @@ class HttpMessage(Message):
             dialogue_reference=dialogue_reference,
             message_id=message_id,
             target=target,
-            performative=HttpMessage.Performative(performative),
+            performative=SigningMessage.Performative(performative),
             **kwargs,
         )
 
@@ -112,7 +149,7 @@ class HttpMessage(Message):
     def performative(self) -> Performative:  # type: ignore # noqa: F821
         """Get the performative of the message."""
         enforce(self.is_set("performative"), "performative is not set.")
-        return cast(HttpMessage.Performative, self.get("performative"))
+        return cast(SigningMessage.Performative, self.get("performative"))
 
     @property
     def target(self) -> int:
@@ -121,49 +158,46 @@ class HttpMessage(Message):
         return cast(int, self.get("target"))
 
     @property
-    def body(self) -> bytes:
-        """Get the 'body' content from the message."""
-        enforce(self.is_set("body"), "'body' content is not set.")
-        return cast(bytes, self.get("body"))
+    def error_code(self) -> CustomErrorCode:
+        """Get the 'error_code' content from the message."""
+        enforce(self.is_set("error_code"), "'error_code' content is not set.")
+        return cast(CustomErrorCode, self.get("error_code"))
 
     @property
-    def headers(self) -> str:
-        """Get the 'headers' content from the message."""
-        enforce(self.is_set("headers"), "'headers' content is not set.")
-        return cast(str, self.get("headers"))
+    def raw_message(self) -> CustomRawMessage:
+        """Get the 'raw_message' content from the message."""
+        enforce(self.is_set("raw_message"), "'raw_message' content is not set.")
+        return cast(CustomRawMessage, self.get("raw_message"))
 
     @property
-    def method(self) -> str:
-        """Get the 'method' content from the message."""
-        enforce(self.is_set("method"), "'method' content is not set.")
-        return cast(str, self.get("method"))
+    def raw_transaction(self) -> CustomRawTransaction:
+        """Get the 'raw_transaction' content from the message."""
+        enforce(self.is_set("raw_transaction"), "'raw_transaction' content is not set.")
+        return cast(CustomRawTransaction, self.get("raw_transaction"))
 
     @property
-    def status_code(self) -> int:
-        """Get the 'status_code' content from the message."""
-        enforce(self.is_set("status_code"), "'status_code' content is not set.")
-        return cast(int, self.get("status_code"))
+    def signed_message(self) -> CustomSignedMessage:
+        """Get the 'signed_message' content from the message."""
+        enforce(self.is_set("signed_message"), "'signed_message' content is not set.")
+        return cast(CustomSignedMessage, self.get("signed_message"))
 
     @property
-    def status_text(self) -> str:
-        """Get the 'status_text' content from the message."""
-        enforce(self.is_set("status_text"), "'status_text' content is not set.")
-        return cast(str, self.get("status_text"))
+    def signed_transaction(self) -> CustomSignedTransaction:
+        """Get the 'signed_transaction' content from the message."""
+        enforce(
+            self.is_set("signed_transaction"),
+            "'signed_transaction' content is not set.",
+        )
+        return cast(CustomSignedTransaction, self.get("signed_transaction"))
 
     @property
-    def url(self) -> str:
-        """Get the 'url' content from the message."""
-        enforce(self.is_set("url"), "'url' content is not set.")
-        return cast(str, self.get("url"))
-
-    @property
-    def version(self) -> str:
-        """Get the 'version' content from the message."""
-        enforce(self.is_set("version"), "'version' content is not set.")
-        return cast(str, self.get("version"))
+    def terms(self) -> CustomTerms:
+        """Get the 'terms' content from the message."""
+        enforce(self.is_set("terms"), "'terms' content is not set.")
+        return cast(CustomTerms, self.get("terms"))
 
     def _is_consistent(self) -> bool:
-        """Check that the message follows the http protocol."""
+        """Check that the message follows the signing protocol."""
         try:
             enforce(
                 isinstance(self.dialogue_reference, tuple),
@@ -199,7 +233,7 @@ class HttpMessage(Message):
             # Light Protocol Rule 2
             # Check correct performative
             enforce(
-                isinstance(self.performative, HttpMessage.Performative),
+                isinstance(self.performative, SigningMessage.Performative),
                 "Invalid 'performative'. Expected either of '{}'. Found '{}'.".format(
                     self.valid_performatives, self.performative
                 ),
@@ -208,68 +242,56 @@ class HttpMessage(Message):
             # Check correct contents
             actual_nb_of_contents = len(self._body) - DEFAULT_BODY_SIZE
             expected_nb_of_contents = 0
-            if self.performative == HttpMessage.Performative.REQUEST:
-                expected_nb_of_contents = 5
+            if self.performative == SigningMessage.Performative.SIGN_TRANSACTION:
+                expected_nb_of_contents = 2
                 enforce(
-                    isinstance(self.method, str),
-                    "Invalid type for content 'method'. Expected 'str'. Found '{}'.".format(
-                        type(self.method)
+                    isinstance(self.terms, CustomTerms),
+                    "Invalid type for content 'terms'. Expected 'Terms'. Found '{}'.".format(
+                        type(self.terms)
                     ),
                 )
                 enforce(
-                    isinstance(self.url, str),
-                    "Invalid type for content 'url'. Expected 'str'. Found '{}'.".format(
-                        type(self.url)
+                    isinstance(self.raw_transaction, CustomRawTransaction),
+                    "Invalid type for content 'raw_transaction'. Expected 'RawTransaction'. Found '{}'.".format(
+                        type(self.raw_transaction)
+                    ),
+                )
+            elif self.performative == SigningMessage.Performative.SIGN_MESSAGE:
+                expected_nb_of_contents = 2
+                enforce(
+                    isinstance(self.terms, CustomTerms),
+                    "Invalid type for content 'terms'. Expected 'Terms'. Found '{}'.".format(
+                        type(self.terms)
                     ),
                 )
                 enforce(
-                    isinstance(self.version, str),
-                    "Invalid type for content 'version'. Expected 'str'. Found '{}'.".format(
-                        type(self.version)
+                    isinstance(self.raw_message, CustomRawMessage),
+                    "Invalid type for content 'raw_message'. Expected 'RawMessage'. Found '{}'.".format(
+                        type(self.raw_message)
                     ),
                 )
+            elif self.performative == SigningMessage.Performative.SIGNED_TRANSACTION:
+                expected_nb_of_contents = 1
                 enforce(
-                    isinstance(self.headers, str),
-                    "Invalid type for content 'headers'. Expected 'str'. Found '{}'.".format(
-                        type(self.headers)
+                    isinstance(self.signed_transaction, CustomSignedTransaction),
+                    "Invalid type for content 'signed_transaction'. Expected 'SignedTransaction'. Found '{}'.".format(
+                        type(self.signed_transaction)
                     ),
                 )
+            elif self.performative == SigningMessage.Performative.SIGNED_MESSAGE:
+                expected_nb_of_contents = 1
                 enforce(
-                    isinstance(self.body, bytes),
-                    "Invalid type for content 'body'. Expected 'bytes'. Found '{}'.".format(
-                        type(self.body)
+                    isinstance(self.signed_message, CustomSignedMessage),
+                    "Invalid type for content 'signed_message'. Expected 'SignedMessage'. Found '{}'.".format(
+                        type(self.signed_message)
                     ),
                 )
-            elif self.performative == HttpMessage.Performative.RESPONSE:
-                expected_nb_of_contents = 5
+            elif self.performative == SigningMessage.Performative.ERROR:
+                expected_nb_of_contents = 1
                 enforce(
-                    isinstance(self.version, str),
-                    "Invalid type for content 'version'. Expected 'str'. Found '{}'.".format(
-                        type(self.version)
-                    ),
-                )
-                enforce(
-                    type(self.status_code) is int,
-                    "Invalid type for content 'status_code'. Expected 'int'. Found '{}'.".format(
-                        type(self.status_code)
-                    ),
-                )
-                enforce(
-                    isinstance(self.status_text, str),
-                    "Invalid type for content 'status_text'. Expected 'str'. Found '{}'.".format(
-                        type(self.status_text)
-                    ),
-                )
-                enforce(
-                    isinstance(self.headers, str),
-                    "Invalid type for content 'headers'. Expected 'str'. Found '{}'.".format(
-                        type(self.headers)
-                    ),
-                )
-                enforce(
-                    isinstance(self.body, bytes),
-                    "Invalid type for content 'body'. Expected 'bytes'. Found '{}'.".format(
-                        type(self.body)
+                    isinstance(self.error_code, CustomErrorCode),
+                    "Invalid type for content 'error_code'. Expected 'ErrorCode'. Found '{}'.".format(
+                        type(self.error_code)
                     ),
                 )
 

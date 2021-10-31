@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------------------------
 #
-#   Copyright 2020 fetchai
+#   Copyright 2020 open_aea
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -22,15 +22,18 @@
 from enum import Enum
 from typing import Any
 
+from aea.helpers.transaction.base import RawMessage as BaseRawMessage
+from aea.helpers.transaction.base import RawTransaction as BaseRawTransaction
+from aea.helpers.transaction.base import SignedMessage as BaseSignedMessage
+from aea.helpers.transaction.base import SignedTransaction as BaseSignedTransaction
+from aea.helpers.transaction.base import Terms as BaseTerms
+
 
 class ErrorCode(Enum):
     """This class represents an instance of ErrorCode."""
 
-    UNSUPPORTED_PROTOCOL = 0
-    DECODING_ERROR = 1
-    INVALID_MESSAGE = 2
-    UNSUPPORTED_SKILL = 3
-    INVALID_DIALOGUE = 4
+    UNSUCCESSFUL_MESSAGE_SIGNING = 0
+    UNSUCCESSFUL_TRANSACTION_SIGNING = 1
 
     @staticmethod
     def encode(error_code_protobuf_object: Any, error_code_object: "ErrorCode") -> None:
@@ -57,3 +60,10 @@ class ErrorCode(Enum):
         """
         enum_value_from_pb2 = error_code_protobuf_object.error_code
         return ErrorCode(enum_value_from_pb2)
+
+
+RawMessage = BaseRawMessage
+RawTransaction = BaseRawTransaction
+SignedMessage = BaseSignedMessage
+SignedTransaction = BaseSignedTransaction
+Terms = BaseTerms

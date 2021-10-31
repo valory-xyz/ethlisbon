@@ -21,8 +21,7 @@
 
 import binascii
 import datetime
-import json
-from typing import Any, Callable, Dict, Optional, Tuple, cast
+from typing import Any, Callable, Dict, Optional, cast
 
 from aea.protocols.dialogue.base import Dialogue
 from aea.skills.behaviours import TickerBehaviour
@@ -34,27 +33,21 @@ from packages.collectooor.contracts.artblocks_periphery.contract import (
 from packages.collectooor.skills.monitor.dialogues import (
     ContractApiDialogue,
     ContractApiDialogues,
-    HttpDialogue,
-    HttpDialogues,
     LedgerApiDialogue,
     LedgerApiDialogues,
     SigningDialogue,
     SigningDialogues,
 )
 from packages.collectooor.skills.monitor.models import Requests
-from packages.fetchai.connections.http_client.connection import (
-    PUBLIC_ID as HTTP_CLIENT_PUBLIC_ID,
-)
 from packages.fetchai.connections.ledger.base import CONNECTION_ID as LEDGER_API_ADDRESS
 from packages.fetchai.protocols.contract_api import ContractApiMessage
-from packages.fetchai.protocols.http import HttpMessage
 from packages.fetchai.protocols.ledger_api import LedgerApiMessage
 from packages.fetchai.protocols.ledger_api.custom_types import (
     TransactionDigest,
     TransactionReceipt,
 )
-from packages.fetchai.protocols.signing import SigningMessage
-from packages.fetchai.protocols.signing.custom_types import (
+from packages.open_aea.protocols.signing import SigningMessage
+from packages.open_aea.protocols.signing.custom_types import (
     RawMessage,
     RawTransaction,
     SignedTransaction,
@@ -385,55 +378,6 @@ class Monitoring(TickerBehaviour):  # pylint: disable=too-many-instance-attribut
             nonce="",
         )
         return terms
-
-    def _build_http_request_message(  # pylint: disable=too-many-arguments
-        self,
-        method: str,
-        url: str,
-        content: Dict = None,
-        headers: Dict = None,
-        parameters: Dict = None,
-    ) -> Tuple[HttpMessage, HttpDialogue]:
-        """
-        Send an http request message from the skill context.
-
-        This method is skill-specific, and therefore
-        should not be used elsewhere.
-
-        :param method: the http request method (i.e. 'GET' or 'POST').
-        :param url: the url to send the message to.
-        :param content: the payload.
-        :param headers: headers to be included.
-        :param parameters: url query parameters.
-        :return: the http message and the http dialogue
-        """
-        if parameters:
-            url = url + "?"
-            for key, val in parameters.items():
-                url += f"{key}={val}&"
-            url = url[:-1]
-
-        header_string = ""
-        if headers:
-            for key, val in headers.items():
-                header_string += f"{key}: {val}\r\n"
-
-        # context
-        http_dialogues = cast(HttpDialogues, self.context.http_dialogues)
-
-        # http request message
-        request_http_message, http_dialogue = http_dialogues.create(
-            counterparty=str(HTTP_CLIENT_PUBLIC_ID),
-            performative=HttpMessage.Performative.REQUEST,
-            method=method,
-            url=url,
-            headers=header_string,
-            version="",
-            body=b"" if content is None else json.dumps(content).encode("utf-8"),
-        )
-        request_http_message = cast(HttpMessage, request_http_message)
-        http_dialogue = cast(HttpDialogue, http_dialogue)
-        return request_http_message, http_dialogue
 
     def send_signing_request(
         self,
