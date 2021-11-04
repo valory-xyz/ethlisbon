@@ -54,7 +54,7 @@ In addition, El Collectooorr could be properly tokenised to give people true acc
       cd frontend && yarn
       yarn start
 
-## Using a custom Gnosis Sage
+## Using a custom Gnosis Safe
 To instantiate a custom Gnosis Safe:
 - Add your env variables.
 - Add network relevant Gnosis contracts.
