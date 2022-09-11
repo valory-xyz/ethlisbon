@@ -79,4 +79,4 @@ new_agent:
 	aea fetch --local collectooor/collectooor
 	cp config/ethereum_private_key.txt collectooor/ethereum_private_key.txt
 	cd collectooor; aea add-key ethereum
-	cd collectooor; aea config set vendor.fetchai.connections.ledger.config.ledger_apis.ethereum.address https://ropsten.infura.io/v3/2980beeca3544c9fbace4f24218afcd4
+	cd collectooor; aea config set vendor.fetchai.connections.ledger.config.ledger_apis.ethereum.address https://ropsten.infura.io/v3/API_KEY_HERE
